@@ -111,12 +111,29 @@ class Track(models.Model):
         self._original_filepath = self.filepath.name if self.pk else None
 
     def save(self, *args, **kwargs):
-        """Переопределяем save для генерации эмбеддинга после сохранения файла."""
-        is_new = self._state.adding
-        super().save(*args, **kwargs) # Сначала сохраняем модель, чтобы получить ID и убедиться, что файл сохранен
+        """Переопределяем save для генерации эмбеддинга и установки флага перестроения Annoy."""
+        # Импортируем AnnoyIndexStatus здесь, внутри метода
+        from .models import AnnoyIndexStatus
 
+        is_new = self._state.adding
         file_changed = self.filepath.name != self._original_filepath
+        
+        # Вызываем оригинальный save, но только если это НЕ просто обновление эмбеддинга
+        # Это предотвращает рекурсию, когда мы обновляем только embedding ниже
+        update_fields = kwargs.get('update_fields')
+        if not update_fields or 'embedding' not in update_fields or len(update_fields) > 1:
+            super().save(*args, **kwargs)
+        
         embedding_needed = (is_new or file_changed) and self.filepath
+        track_deleted = not self.filepath and self._original_filepath is not None
+
+        # Устанавливаем флаг, если трек добавлен, удален или файл изменен
+        if is_new or file_changed or track_deleted:
+             status, created = AnnoyIndexStatus.objects.get_or_create(singleton_instance_id=1)
+             if not status.needs_rebuild:
+                 status.needs_rebuild = True
+                 status.save(update_fields=['needs_rebuild']) 
+                 logger.info("Annoy index rebuild flag set to True due to Track changes.")
 
         if embedding_needed:
             try:
@@ -124,20 +141,24 @@ class Track(models.Model):
                 logger.info(f"Track saved/updated (ID: {self.pk}). Generating embedding for: {full_audio_path}")
                 new_embedding = generate_clap_embedding(full_audio_path)
                 if new_embedding:
-                    # Обновляем только поле embedding, избегая рекурсивного вызова save
                     Track.objects.filter(pk=self.pk).update(embedding=new_embedding)
                     logger.info(f"Embedding saved successfully for Track ID: {self.pk}")
-                    # Обновляем _original_filepath после успешного сохранения
                     self._original_filepath = self.filepath.name
                 else:
-                    logger.warning(f"Embedding generation failed for Track ID: {self.pk}, file: {self.filepath.name}")
+                    logger.warning(f"Embedding generation failed for Track ID: {self.pk}, file: {self.filepath.name}. Clearing embedding.")
+                    # Очищаем эмбеддинг, если генерация не удалась
+                    Track.objects.filter(pk=self.pk).update(embedding=None)
             except Exception as e:
                 logger.error(f"Error during embedding generation/update for Track ID {self.pk}: {e}", exc_info=True)
-        elif not self.filepath:
-             if is_new or file_changed:
-                 logger.warning(f"Track ID: {self.pk} saved without a file. Clearing embedding.")
-                 Track.objects.filter(pk=self.pk).update(embedding=None)
-                 self._original_filepath = None
+                Track.objects.filter(pk=self.pk).update(embedding=None) # Очищаем при ошибке
+        elif track_deleted: # Если файл удален из существующего трека
+            logger.warning(f"Track ID: {self.pk} file removed. Clearing embedding.")
+            Track.objects.filter(pk=self.pk).update(embedding=None)
+            self._original_filepath = None
+        elif not self.filepath and is_new:
+             # Если трек создан без файла (например, через админку без загрузки)
+             logger.warning(f"Track ID: {self.pk} created without file. No embedding generated.")
+             self._original_filepath = None
 
     def __str__(self):
         return f"{self.artist} - {self.title}"
@@ -265,6 +286,20 @@ class LikeDislike(models.Model):
         # Дополнительная валидация, если нужно
         if self.vote not in [self.LIKE, self.DISLIKE]:
             raise ValidationError("Недопустимое значение для голоса.")
+
+# --- Модель статуса индекса Annoy ---
+class AnnoyIndexStatus(models.Model):
+    # Используем Singleton-подобный подход: всегда будет только одна запись
+    singleton_instance_id = models.PositiveIntegerField(default=1, unique=True, editable=False)
+    needs_rebuild = models.BooleanField(default=False, verbose_name="Требуется перестроение индекса")
+    last_build_time = models.DateTimeField(null=True, blank=True, verbose_name="Время последнего построения")
+
+    def __str__(self):
+        return f"Статус индекса Annoy (Перестроение: {self.needs_rebuild})"
+
+    class Meta:
+        verbose_name = "Статус индекса Annoy"
+        verbose_name_plural = "Статус индекса Annoy"
 
 # Не забыть добавить 'core.apps.CoreConfig' в INSTALLED_APPS в settings.py
 # И указать AUTH_USER_MODEL = 'core.User'

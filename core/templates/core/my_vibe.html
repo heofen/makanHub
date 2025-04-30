@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Мой вайб - makanHub{% endblock %}
+
+{% block extra_head %}
+{# Стили для кнопок лайков, если нужны #}
+<style>
+    .vote-buttons button {
+        margin-right: 5px;
+        min-width: 80px;
+    }
+    .vote-buttons .active-like {
+        background-color: #198754;
+        color: white;
+        border-color: #198754;
+    }
+     .vote-buttons .active-dislike {
+        background-color: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <h1>Мой вайб ✨</h1>
+
+    {% if recommendations %}
+        <p class="text-muted">Рекомендации на основе трека: {{ source_track.artist }} - {{ source_track.title }}</p>
+        <h2 class="mt-4">Похожие треки:</h2>
+        <div class="list-group mt-3">
+            {% for track in recommendations %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'track_detail' track.pk %}"><strong>{{ track.artist }} - {{ track.title }}</strong></a>
+                        <small class="text-muted d-block">
+                            {% if track.genre %}Жанр: {{ track.genre.name }}{% endif %}
+                            (ID: {{ track.pk }})
+                        </small>
+                    </div>
+                    {# Блок лайков/дизлайков #}
+                    <div class="vote-buttons ms-3" data-track-id="{{ track.pk }}" data-vote-url="{% url 'vote_track' track.pk %}">
+                        {% with user_vote=user_votes|get_item:track.pk %}
+                            <button class="btn btn-outline-success btn-sm {% if user_vote == 1 %}active-like{% endif %}" data-vote-type="like">
+                                <span class="like-count">{{ track.likes_count }}</span> 👍
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm {% if user_vote == -1 %}active-dislike{% endif %}" data-vote-type="dislike">
+                                <span class="dislike-count">{{ track.dislikes_count }}</span> 👎
+                            </button>
+                        {% endwith %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% elif source_track %}
+        <div class="alert alert-info mt-4" role="alert">
+            Мы подобрали рекомендации на основе трека "{{ source_track.artist }} - {{ source_track.title }}", но не нашли похожих треков в индексе Annoy.
+            Попробуйте <a href="{% url 'my_vibe' %}" class="alert-link">обновить вайб</a> или <a href="{% url 'home' %}" class="alert-link">поискать что-то еще</a>.
+        </div>
+    {% else %}
+        <div class="alert alert-warning mt-4" role="alert">
+            Пока не можем поймать ваш вайб! 😥 Пожалуйста, <a href="{% url 'home' %}" class="alert-link">поставьте лайки</a> трекам, которые вам нравятся, чтобы мы могли подобрать рекомендации.
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{% url 'home' %}" class="btn btn-secondary">&larr; На главную</a>
+        {% if recommendations or source_track %}
+            <a href="{% url 'my_vibe' %}" class="btn btn-primary">Обновить вайб</a>
+        {% endif %}
+    </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{# Копируем JS для AJAX лайков из track_detail.html #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.vote-buttons').forEach(voteButtonsContainer => {
+        if (!voteButtonsContainer) return;
+        const trackId = voteButtonsContainer.dataset.trackId;
+        const voteUrl = voteButtonsContainer.dataset.voteUrl;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
+
+        voteButtonsContainer.addEventListener('click', function(event) {
+            let targetButton = null;
+            if (event.target.tagName === 'BUTTON' && event.target.dataset.voteType) {
+                targetButton = event.target;
+            } else if (event.target.parentElement.tagName === 'BUTTON' && event.target.parentElement.dataset.voteType) {
+                 targetButton = event.target.parentElement; // Клик по иконке или счетчику внутри кнопки
+            }
+
+            if (targetButton) {
+                const button = targetButton;
+                const voteType = button.dataset.voteType;
+
+                fetch(voteUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `vote_type=${voteType}`
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const likeButton = voteButtonsContainer.querySelector('button[data-vote-type="like"]');
+                        const dislikeButton = voteButtonsContainer.querySelector('button[data-vote-type="dislike"]');
+                        likeButton.querySelector('.like-count').textContent = data.likes_count;
+                        dislikeButton.querySelector('.dislike-count').textContent = data.dislikes_count;
+
+                        likeButton.classList.remove('active-like');
+                        dislikeButton.classList.remove('active-dislike');
+                        if (data.user_vote === 1) likeButton.classList.add('active-like');
+                        else if (data.user_vote === -1) dislikeButton.classList.add('active-dislike');
+                    } else {
+                        console.error('Vote failed:', data);
+                        alert("Произошла ошибка при голосовании.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    alert("Произошла ошибка сети при голосовании.");
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

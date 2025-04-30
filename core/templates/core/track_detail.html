@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %} {# Загружаем наши теги #}
+
+{% block title %}{{ track.artist }} - {{ track.title }} - makanHub{% endblock %}
+
+{% block extra_head %}
+<style>
+    .vote-buttons button {
+        margin-right: 5px;
+        min-width: 80px; /* Чтобы кнопки не сильно меняли размер */
+    }
+    .vote-buttons .active-like {
+        background-color: #198754; /* Зеленый Bootstrap */
+        color: white;
+        border-color: #198754;
+    }
+     .vote-buttons .active-dislike {
+        background-color: #dc3545; /* Красный Bootstrap */
+        color: white;
+        border-color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h1>{{ track.artist }} - {{ track.title }}</h1>
+    </div>
+    <div class="card-body">
+        <p><strong>Исполнитель:</strong> {{ track.artist }}</p>
+        <p><strong>Название:</strong> {{ track.title }}</p>
+        <p><strong>Жанр:</strong> {{ track.genre.name|default:"Не указан" }}</p>
+        <p><strong>Длительность:</strong> {{ track.duration }} секунд</p>
+        {% if track.filepath %}
+            <p><strong>Аудио:</strong></p>
+            <audio controls controlsList="nodownload" class="w-100">
+                <source src="{{ track.filepath.url }}" type="audio/mpeg"> {# Уточнить MIME type, если нужно #}
+                Ваш браузер не поддерживает аудио элемент.
+            </audio>
+        {% else %}
+            <p>Аудиофайл не загружен.</p>
+        {% endif %}
+
+        {# --- Блок Лайков/Дизлайков --- #}
+        <div class="mt-3 vote-buttons" data-track-id="{{ track.pk }}" data-vote-url="{% url 'vote_track' track.pk %}">
+            {% if user.is_authenticated %}
+                {# Получаем текущий голос пользователя (если есть) - передаем из view #}
+                {% with user_vote=user_votes|get_item:track.pk %}
+                    <button class="btn btn-outline-success btn-sm {% if user_vote == 1 %}active-like{% endif %}" data-vote-type="like">
+                        <span class="like-count">{{ track.likes_count }}</span> 👍
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm {% if user_vote == -1 %}active-dislike{% endif %}" data-vote-type="dislike">
+                        <span class="dislike-count">{{ track.dislikes_count }}</span> 👎
+                    </button>
+                {% endwith %}
+            {% else %}
+                <span class="text-muted me-2">Нравится: {{ track.likes_count }}</span>
+                <span class="text-muted">Не нравится: {{ track.dislikes_count }}</span>
+                <small class="ms-2"><a href="{% url 'login' %}?next={{ request.path }}">Войдите</a>, чтобы голосовать.</small>
+            {% endif %}
+        </div>
+        {# --- Конец блока Лайков/Дизлайков --- #}
+
+        {# Ссылка на рекомендации #}
+        <div class="mt-3">
+             <a href="{% url 'track_recommendations' track.pk %}" class="btn btn-info">Показать похожие треки</a>
+        </div>
+
+        {# Место для информации об альбомах, плейлистах... #}
+
+    </div>
+    <div class="card-footer text-muted">
+        ID: {{ track.pk }}
+    </div>
+</div>
+
+<a href="{% url 'home' %}" class="btn btn-secondary">&larr; На главную</a>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if user.is_authenticated %}
+<script>
+// Простой AJAX для отправки голоса
+document.addEventListener('DOMContentLoaded', function() {
+    const voteButtonsContainer = document.querySelector('.vote-buttons');
+    if (!voteButtonsContainer) return;
+
+    const trackId = voteButtonsContainer.dataset.trackId;
+    const voteUrl = voteButtonsContainer.dataset.voteUrl;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}'; // Получаем CSRF токен
+
+    voteButtonsContainer.addEventListener('click', function(event) {
+        if (event.target.tagName === 'BUTTON' && event.target.dataset.voteType) {
+            const button = event.target;
+            const voteType = button.dataset.voteType;
+
+            fetch(voteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `vote_type=${voteType}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Обновляем счетчики
+                    const likeButton = voteButtonsContainer.querySelector('button[data-vote-type="like"]');
+                    const dislikeButton = voteButtonsContainer.querySelector('button[data-vote-type="dislike"]');
+                    likeButton.querySelector('.like-count').textContent = data.likes_count;
+                    dislikeButton.querySelector('.dislike-count').textContent = data.dislikes_count;
+
+                    // Обновляем стиль кнопок
+                    likeButton.classList.remove('active-like');
+                    dislikeButton.classList.remove('active-dislike');
+                    if (data.user_vote === 1) {
+                        likeButton.classList.add('active-like');
+                    } else if (data.user_vote === -1) {
+                        dislikeButton.classList.add('active-dislike');
+                    }
+                } else {
+                    console.error('Vote failed:', data);
+                    // Можно показать сообщение об ошибке пользователю
+                    alert("Произошла ошибка при голосовании.");
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                alert("Произошла ошибка сети при голосовании.");
+            });
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %} 

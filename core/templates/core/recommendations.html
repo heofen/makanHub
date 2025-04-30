@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Рекомендации для {{ source_track.title }} - makanHub{% endblock %}
+
+{% block content %}
+    <h1>Рекомендации для трека: {{ source_track.artist }} - {{ source_track.title }}</h1>
+
+    {% if recommendations %}
+        <h2 class="mt-4">Похожие треки:</h2>
+        <div class="list-group mt-3">
+            {% for track in recommendations %}
+                <a href="{% url 'track_detail' track.pk %}" class="list-group-item list-group-item-action">
+                    <strong>{{ track.artist }} - {{ track.title }}</strong>
+                    <small class="text-muted">
+                        {% if track.genre %}(Жанр: {{ track.genre.name }}){% endif %}
+                        (ID: {{ track.pk }})
+                    </small>
+                    {# Сюда можно добавить кнопку проигрывания #}
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning mt-4" role="alert">
+            Рекомендации не найдены. Возможно, индекс Annoy еще не построен или нет похожих треков.
+            Попробуйте запустить команду: <code>python manage.py build_annoy_index</code>
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{% url 'track_detail' source_track.pk %}" class="btn btn-secondary">&larr; К треку</a>
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">На главную</a>
+    </div>
+
+{% endblock %} 

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Загрузить новый трек - makanHub{% endblock %}
+
+{% block content %}
+    <h1>Загрузить новый трек</h1>
+
+    {# Сообщения уже отображаются в base.html #}
+
+    <form method="post" enctype="multipart/form-data" class="mt-4">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="mb-3"> {# Используем классы Bootstrap #}
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }} {# Виджеты уже настроены с классами form-control/form-select в forms.py #}
+                {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div> {# Отображение ошибок Bootstrap #}
+                {% endfor %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Загрузить</button>
+    </form>
+{% endblock %} 

@@ -11,7 +11,12 @@
             <h1>Все треки</h1>
         {% endif %}
     </div>
-    <!-- здесь можно добавить форму поиска -->
+    <div class="col-md-6">
+        <form class="d-flex" action="{% url 'home' %}" method="get" role="search">
+            <input class="form-control me-2" type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Найти трек или исполнителя..." aria-label="Search">
+            <button class="btn btn-outline-success" type="submit">Поиск</button>
+        </form>
+    </div>
 </div>
 
 {% if page_obj.object_list %}

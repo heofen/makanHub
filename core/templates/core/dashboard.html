@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Дэшборд{% endblock %}
+
+{% block extra_head %}
+<!-- Подключаем Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Дэшборд</h1>
+
+    <div class="row">
+        <!-- Круговая диаграмма жанров -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Распределение треков по жанрам</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="genreChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Горизонтальная столбчатая диаграмма топ-10 треков -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Топ-10 самых лайкнутых треков</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="tracksChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Получаем данные из контекста Django
+const genreData = {{ genre_data|safe }};
+const tracksData = {{ tracks_data|safe }};
+
+// Создаем круговую диаграмму жанров
+new Chart(document.getElementById('genreChart'), {
+    type: 'pie',
+    data: {
+        labels: genreData.labels,
+        datasets: [{
+            data: genreData.data,
+            backgroundColor: genreData.colors,
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right',
+            },
+            title: {
+                display: true,
+                text: 'Распределение треков по жанрам'
+            }
+        }
+    }
+});
+
+// Создаем горизонтальную столбчатую диаграмму топ-10 треков
+new Chart(document.getElementById('tracksChart'), {
+    type: 'bar',
+    data: {
+        labels: tracksData.labels,
+        datasets: [{
+            label: 'Количество лайков',
+            data: tracksData.data,
+            backgroundColor: '#36A2EB',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            title: {
+                display: true,
+                text: 'Топ-10 самых лайкнутых треков'
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Количество лайков'
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
+{% endblock %} 

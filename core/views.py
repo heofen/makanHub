@@ -19,6 +19,7 @@ from django.db.models.functions import Coalesce # Добавили Coalesce
 import random # Для выбора случайного трека
 from django.core.cache import cache
 from django.utils import timezone
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,53 @@ def stats_view(request):
     cache.set(cache_key, context, 3600)
     
     return render(request, "core/stats.html", context)
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def dashboard_view(request):
+    # Ключ для кэша
+    cache_key = 'dashboard_data'
+    # Пробуем получить данные из кэша
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        return render(request, "core/dashboard.html", cached_data)
+    
+    # Получаем данные для круговой диаграммы жанров
+    genre_stats = Genre.objects.annotate(
+        track_count=Count('tracks')
+    ).values('name', 'track_count').order_by('-track_count')
+    
+    # Форматируем данные для Chart.js
+    genre_data = {
+        'labels': [genre['name'] for genre in genre_stats],
+        'data': [genre['track_count'] for genre in genre_stats],
+        'colors': [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+            '#FF9F40', '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'
+        ]
+    }
+    
+    # Получаем данные для горизонтальной столбчатой диаграммы топ-10 лайкнутых треков
+    top_liked_tracks = Track.objects.annotate(
+        like_count=Count('votes', filter=Q(votes__vote=LikeDislike.LIKE))
+    ).order_by('-like_count')[:10]
+    
+    # Форматируем данные для Chart.js
+    tracks_data = {
+        'labels': [f"{track.artist} - {track.title}" for track in top_liked_tracks],
+        'data': [track.like_count for track in top_liked_tracks]
+    }
+    
+    context = {
+        'genre_data': json.dumps(genre_data),
+        'tracks_data': json.dumps(tracks_data)
+    }
+    
+    # Сохраняем в кэш на 1 час
+    cache.set(cache_key, context, 3600)
+    
+    return render(request, "core/dashboard.html", context)
 
 def new_track_view(request):
     if request.method == 'POST':

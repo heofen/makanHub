@@ -51,6 +51,9 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'stats' %}active{% endif %}" href="{% url 'stats' %}">Статистика</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Дэшборд</a>
+                    </li>
                 {% endif %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'admin:index' %}">Админка</a>

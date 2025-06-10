@@ -20,6 +20,9 @@ urlpatterns = [
 
     # Статистика (только для staff)
     path('stats/', views.stats_view, name='stats'),
+    
+    # Дэшборд (только для staff)
+    path('dashboard/', views.dashboard_view, name='dashboard'),
 
     # Другие URL приложения core здесь
 ] 

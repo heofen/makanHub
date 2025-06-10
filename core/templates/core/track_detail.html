@@ -35,10 +35,9 @@
         <p><strong>Длительность:</strong> {{ track.duration }} секунд</p>
         {% if track.filepath %}
             <p><strong>Аудио:</strong></p>
-            <audio controls controlsList="nodownload" class="w-100">
-                <source src="{{ track.filepath.url }}" type="audio/mpeg"> {# Уточнить MIME type, если нужно #}
-                Ваш браузер не поддерживает аудио элемент.
-            </audio>
+            <button class="btn btn-primary" onclick="gpPlay({src:'{{ track.filepath.url }}', title:'{{ track.title|escapejs }}', artist:'{{ track.artist|escapejs }}'})">
+                <i class="bi bi-play-fill me-1"></i> Воспроизвести
+            </button>
         {% else %}
             <p>Аудиофайл не загружен.</p>
         {% endif %}

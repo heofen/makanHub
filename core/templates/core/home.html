@@ -27,8 +27,11 @@
                         | Длительность: {{ track.duration }} сек.
                     </small>
                 </div>
-                {# Сюда можно добавить кнопки Play/Add to playlist #}
-                <span class="badge bg-primary rounded-pill">ID: {{ track.pk }}</span>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-play-fill fs-3 text-white me-3" role="button"
+                       onclick="gpPlay({src:'{{ track.filepath.url }}', title:'{{ track.title|escapejs }}', artist:'{{ track.artist|escapejs }}'})"></i>
+                    <span class="badge bg-primary rounded-pill">ID: {{ track.pk }}</span>
+                </div>
             </a>
         {% endfor %}
     </div>

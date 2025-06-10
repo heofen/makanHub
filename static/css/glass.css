@@ -1,0 +1,55 @@
+/* Glassmorphism styles */
+html, body {
+    height: 100%;
+}
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    color: #fff;
+}
+
+.navbar-glass {
+    background: rgba(0, 0, 0, 0.35) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card, .list-group-item, .alert, .modal-content {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: #fff;
+}
+
+.btn {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.btn-primary {
+    background: rgba(54, 162, 235, 0.6) !important;
+    border-color: rgba(54, 162, 235, 0.6) !important;
+}
+
+.btn-secondary {
+    background: rgba(108, 117, 125, 0.6) !important;
+    border-color: rgba(108, 117, 125, 0.6) !important;
+}
+
+.btn-danger {
+    background: rgba(220, 53, 69, 0.6) !important;
+    border-color: rgba(220, 53, 69, 0.6) !important;
+}
+
+.pagination .page-link {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.footer, footer {
+    color: #fff;
+} 

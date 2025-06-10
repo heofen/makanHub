@@ -5,7 +5,11 @@
 {% block content %}
 <div class="row mb-3">
     <div class="col">
-        <h1>Все треки</h1>
+        {% if request.GET.q %}
+            <h1>Результаты поиска «{{ request.GET.q }}»</h1>
+        {% else %}
+            <h1>Все треки</h1>
+        {% endif %}
     </div>
     <!-- здесь можно добавить форму поиска -->
 </div>

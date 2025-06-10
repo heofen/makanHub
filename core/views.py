@@ -237,8 +237,11 @@ def track_detail_view(request, track_id):
     return render(request, 'core/track_detail.html', context)
 
 def home_view(request):
-    # TODO: Добавить поиск и фильтрацию
-    track_list = Track.objects.select_related('genre').order_by('-id') # Последние загруженные сверху
+    q = request.GET.get('q', '').strip()
+    track_list = Track.objects.select_related('genre')
+    if q:
+        track_list = track_list.filter(Q(title__icontains=q) | Q(artist__icontains=q))
+    track_list = track_list.order_by('-id')
     paginator = Paginator(track_list, 10) # По 10 треков на страницу
 
     page_number = request.GET.get('page')

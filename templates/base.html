@@ -47,7 +47,12 @@
                 {# Добавить другие ссылки по мере необходимости (Плейлисты, Жанры...) #}
             </ul>
             <ul class="navbar-nav ms-auto mb-2 mb-md-0">
-                 <li class="nav-item">
+                {% if user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'stats' %}active{% endif %}" href="{% url 'stats' %}">Статистика</a>
+                    </li>
+                {% endif %}
+                <li class="nav-item">
                     <a class="nav-link" href="{% url 'admin:index' %}">Админка</a>
                 </li>
                 {% if user.is_authenticated %}

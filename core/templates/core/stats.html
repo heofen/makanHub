@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}Статистика{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Статистика</h1>
+
+    <!-- Контент -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Контент</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Всего треков</h3>
+                            <p class="h2">{{ content_stats.total_tracks }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Всего альбомов</h3>
+                            <p class="h2">{{ content_stats.total_albums }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Всего жанров</h3>
+                            <p class="h2">{{ content_stats.total_genres|length }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Средняя длительность</h3>
+                            <p class="h2">{{ content_stats.avg_track_duration|floatformat:1 }} сек</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Жанры -->
+            <h3 class="h5 mt-4">Треки по жанрам</h3>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Жанр</th>
+                            <th>Количество треков</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for genre in content_stats.total_genres %}
+                        <tr>
+                            <td>{{ genre.name }}</td>
+                            <td>{{ genre.track_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Пользователи -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Пользователи</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Всего пользователей</h3>
+                            <p class="h2">{{ user_stats.total_users }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Топ пользователей -->
+            <h3 class="h5 mt-4">Топ пользователей по лайкам</h3>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Лайки</th>
+                            <th>Дизлайки</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in user_stats.top_users %}
+                        <tr>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.like_count }}</td>
+                            <td>{{ user.dislike_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Взаимодействия -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Взаимодействия</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Всего лайков</h3>
+                            <p class="h2">{{ interaction_stats.total_likes }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="h6">Всего дизлайков</h3>
+                            <p class="h2">{{ interaction_stats.total_dislikes }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Топ треков -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h3 class="h5">Топ лайкнутых треков</h3>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Трек</th>
+                                    <th>Лайки</th>
+                                    <th>Дизлайки</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for track in interaction_stats.top_liked %}
+                                <tr>
+                                    <td>{{ track.title }}</td>
+                                    <td>{{ track.like_count }}</td>
+                                    <td>{{ track.dislike_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h3 class="h5">Топ дизлайкнутых треков</h3>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Трек</th>
+                                    <th>Лайки</th>
+                                    <th>Дизлайки</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for track in interaction_stats.top_disliked %}
+                                <tr>
+                                    <td>{{ track.title }}</td>
+                                    <td>{{ track.like_count }}</td>
+                                    <td>{{ track.dislike_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-muted text-end">
+        <small>Последнее обновление: {{ last_updated|date:"d.m.Y H:i" }}</small>
+    </div>
+</div>
+{% endblock %} 

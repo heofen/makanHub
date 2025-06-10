@@ -6,7 +6,6 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 class TrackForm(forms.ModelForm):
     class Meta:
         model = Track
-        # Исключаем поля, которые генерируются/определяются автоматически
         exclude = ('embedding', 'duration')
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
@@ -47,4 +46,16 @@ class LoginForm(AuthenticationForm):
         label="Пароль",
         strip=False,
         widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'class': 'form-control', 'placeholder':'Пароль'})
+    )
+
+class BulkTrackUploadForm(forms.Form):
+    artist = forms.CharField(
+        label='Исполнитель',
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    audio_files = forms.FileField(
+        label='Аудиофайлы',
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        help_text='Выберите один или несколько аудиофайлов'
     ) 

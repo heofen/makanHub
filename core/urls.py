@@ -18,5 +18,8 @@ urlpatterns = [
     # Персональные рекомендации
     path('my_vibe/', views.my_vibe_view, name='my_vibe'),
 
+    # Статистика (только для staff)
+    path('stats/', views.stats_view, name='stats'),
+
     # Другие URL приложения core здесь
 ] 

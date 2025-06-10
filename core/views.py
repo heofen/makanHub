@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .forms import TrackForm, UserRegistrationForm, LoginForm # Добавлены UserRegistrationForm, LoginForm
-from .models import Track, LikeDislike, User # Добавили User и LikeDislike
+from .models import Track, LikeDislike, User, Genre, Album # Добавили User, Genre, Album и LikeDislike
 from .annoy_service import annoy_service # Импортируем глобальный экземпляр сервиса
 from django.http import Http404, JsonResponse, HttpResponseBadRequest
 from django.core.paginator import Paginator # Для пагинации
@@ -13,12 +13,76 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.contrib.auth import login, logout # Нужны для login/logout
 from django.urls import reverse_lazy # Для редиректа после регистрации
 from django.contrib.auth.views import LoginView, LogoutView # Используем встроенные LoginView/LogoutView
-from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q, Value, Case, When # Добавили Value, Case, When
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Count, Q, Value, Case, When, Avg # Добавили Value, Case, When, Avg
 from django.db.models.functions import Coalesce # Добавили Coalesce
 import random # Для выбора случайного трека
+from django.core.cache import cache
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def stats_view(request):
+    # Ключ для кэша
+    cache_key = 'stats_data'
+    # Пробуем получить данные из кэша
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        return render(request, "core/stats.html", cached_data)
+    
+    # Если данных нет в кэше, собираем их
+    content_stats = {
+        "total_tracks": Track.objects.count(),
+        "total_albums": Album.objects.count(),
+        "total_genres": Genre.objects
+            .annotate(track_count=Count('tracks'))
+            .values('name', 'track_count')
+            .order_by('-track_count'),
+        "avg_track_duration": Track.objects
+            .aggregate(avg=Avg('duration'))['avg'] or 0
+    }
+
+    user_stats = {
+        "total_users": User.objects.count(),
+        "top_users": User.objects
+            .annotate(
+                like_count=Count('track_votes', filter=Q(track_votes__vote=LikeDislike.LIKE)),
+                dislike_count=Count('track_votes', filter=Q(track_votes__vote=LikeDislike.DISLIKE))
+            )
+            .order_by('-like_count')[:5]
+    }
+
+    interaction_stats = {
+        "total_likes": LikeDislike.objects.filter(vote=LikeDislike.LIKE).count(),
+        "total_dislikes": LikeDislike.objects.filter(vote=LikeDislike.DISLIKE).count(),
+        "top_liked": Track.objects
+            .annotate(
+                like_count=Count('votes', filter=Q(votes__vote=LikeDislike.LIKE)),
+                dislike_count=Count('votes', filter=Q(votes__vote=LikeDislike.DISLIKE))
+            )
+            .order_by('-like_count')[:10],
+        "top_disliked": Track.objects
+            .annotate(
+                like_count=Count('votes', filter=Q(votes__vote=LikeDislike.LIKE)),
+                dislike_count=Count('votes', filter=Q(votes__vote=LikeDislike.DISLIKE))
+            )
+            .order_by('-dislike_count')[:10],
+    }
+
+    context = {
+        "content_stats": content_stats,
+        "user_stats": user_stats,
+        "interaction_stats": interaction_stats,
+        "last_updated": timezone.now()
+    }
+    
+    # Сохраняем в кэш на 1 час
+    cache.set(cache_key, context, 3600)
+    
+    return render(request, "core/stats.html", context)
 
 def new_track_view(request):
     if request.method == 'POST':

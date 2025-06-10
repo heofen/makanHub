@@ -68,6 +68,14 @@
              <a href="{% url 'track_recommendations' track.pk %}" class="btn btn-info">Показать похожие треки</a>
         </div>
 
+        {# Кнопки редактирования и удаления #}
+        {% if user.is_authenticated and user == track.uploaded_by or user.is_staff %}
+        <div class="mt-3">
+            <a href="{% url 'track_edit' track.id %}" class="btn btn-outline-primary">Редактировать</a>
+            <a href="{% url 'track_delete' track.id %}" class="btn btn-outline-danger">Удалить</a>
+        </div>
+        {% endif %}
+
         {# Место для информации об альбомах, плейлистах... #}
 
     </div>

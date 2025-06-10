@@ -3,7 +3,7 @@ from django.contrib import messages
 from .forms import TrackForm, UserRegistrationForm, LoginForm # Добавлены UserRegistrationForm, LoginForm
 from .models import Track, LikeDislike, User, Genre, Album # Добавили User, Genre, Album и LikeDislike
 from .annoy_service import annoy_service # Импортируем глобальный экземпляр сервиса
-from django.http import Http404, JsonResponse, HttpResponseBadRequest
+from django.http import Http404, JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.core.paginator import Paginator # Для пагинации
 import librosa # Используем librosa для длительности
 import math # Для округления
@@ -385,5 +385,64 @@ def my_vibe_view(request):
         'user_votes': user_votes, # Голоса пользователя для рекомендованных треков
     }
     return render(request, 'core/my_vibe.html', context)
+
+@login_required
+def track_edit_view(request, track_id):
+    """
+    Представление для редактирования существующего трека.
+    """
+    track = get_object_or_404(Track, id=track_id)
+    
+    # Проверяем, является ли пользователь владельцем трека или администратором
+    if not (request.user == track.uploaded_by or request.user.is_staff):
+        return HttpResponseForbidden("У вас нет прав для редактирования этого трека")
+    
+    if request.method == 'POST':
+        form = TrackForm(request.POST, request.FILES, instance=track)
+        if form.is_valid():
+            # Если загружен новый файл, удаляем старый
+            if 'audio_file' in request.FILES:
+                if track.audio_file:
+                    old_file_path = track.audio_file.path
+                    if os.path.exists(old_file_path):
+                        os.remove(old_file_path)
+            
+            form.save()
+            messages.success(request, 'Трек успешно обновлен')
+            return redirect('track_detail', track_id=track.id)
+    else:
+        form = TrackForm(instance=track)
+    
+    return render(request, 'core/track_edit.html', {
+        'form': form,
+        'track': track
+    })
+
+@login_required
+def track_delete_view(request, track_id):
+    """
+    Представление для удаления трека.
+    """
+    track = get_object_or_404(Track, id=track_id)
+    
+    # Проверяем, является ли пользователь владельцем трека или администратором
+    if not (request.user == track.uploaded_by or request.user.is_staff):
+        return HttpResponseForbidden("У вас нет прав для удаления этого трека")
+    
+    if request.method == 'POST':
+        # Удаляем файл с диска
+        if track.audio_file:
+            file_path = track.audio_file.path
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Удаляем запись из базы данных
+        track.delete()
+        messages.success(request, 'Трек успешно удален')
+        return redirect('home')
+    
+    return render(request, 'core/track_confirm_delete.html', {
+        'track': track
+    })
 
 # Другие view могут быть добавлены здесь
